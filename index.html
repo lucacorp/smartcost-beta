@@ -502,6 +502,11 @@
             const formData = new FormData(event.target);
             const data = Object.fromEntries(formData.entries());
             
+            // Convert terms checkbox to boolean (remove if not needed by API)
+            if (data.terms) {
+                delete data.terms; // API não requer este campo
+            }
+            
             // Hide previous messages
             document.getElementById('successMsg').style.display = 'none';
             document.getElementById('errorMsg').style.display = 'none';
@@ -513,7 +518,7 @@
             btn.disabled = true;
             
             try {
-                // TODO: Replace with actual API endpoint
+                console.log('Enviando dados:', data); // Debug
                 const response = await fetch('https://smartcost-api-7016.azurewebsites.net/api/betasignup', {
                     method: 'POST',
                     headers: {
@@ -538,11 +543,22 @@
                         });
                     }
                 } else {
-                    throw new Error('Signup failed');
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('API Error:', response.status, errorData);
+                    throw new Error(errorData.message || `Erro ${response.status}: Falha ao processar inscrição`);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                document.getElementById('errorMsg').style.display = 'block';
+                const errorMsg = document.getElementById('errorMsg');
+                
+                // Mensagem de erro mais específica
+                if (error.message.includes('Failed to fetch')) {
+                    errorMsg.innerHTML = '<strong>Erro de Conexão:</strong> Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.';
+                } else {
+                    errorMsg.innerHTML = `<strong>Erro:</strong> ${error.message}`;
+                }
+                
+                errorMsg.style.display = 'block';
             } finally {
                 btn.innerText = originalText;
                 btn.disabled = false;
